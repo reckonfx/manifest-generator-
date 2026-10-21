@@ -1,0 +1,948 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Direct USA Manifest</title>
+<style>
+:root{
+  --bg:#f5f4f0;--panel:#ffffff;--ink:#1d1f21;--muted:#6b6f75;--line:#dedbd3;
+  --accent:#0f5c4d;--accent-ink:#ffffff;--soft:#e7f1ee;--warn:#9a5b00;--warn-bg:#fff4df;
+  --err:#a8261d;--err-bg:#fde9e7;--ok:#1e6b3a;--input:#fbfaf7;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#141516;--panel:#1d1f21;--ink:#ecebe7;--muted:#9a9ea4;--line:#33363a;
+  --accent:#4fb39b;--accent-ink:#0b1513;--soft:#1f2e2a;--warn:#f0b54a;--warn-bg:#2e2615;
+  --err:#ff8a7f;--err-bg:#331a18;--ok:#7fd49c;--input:#17191b;}}
+:root[data-theme="dark"]{
+  --bg:#141516;--panel:#1d1f21;--ink:#ecebe7;--muted:#9a9ea4;--line:#33363a;
+  --accent:#4fb39b;--accent-ink:#0b1513;--soft:#1f2e2a;--warn:#f0b54a;--warn-bg:#2e2615;
+  --err:#ff8a7f;--err-bg:#331a18;--ok:#7fd49c;--input:#17191b;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.mono,code,.code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+header{position:sticky;top:0;z-index:20;background:var(--panel);border-bottom:1px solid var(--line)}
+.bar{max-width:1180px;margin:0 auto;padding:10px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.bar h1{font-size:16px;margin:0 12px 0 0}
+.stat{font-size:12px;color:var(--muted)}.stat b{color:var(--ink);font-size:14px}
+.spacer{flex:1}
+main{max-width:1180px;margin:0 auto;padding:16px}
+section.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 10px}
+.grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}
+.grid.wide{grid-template-columns:repeat(auto-fill,minmax(240px,1fr))}
+label{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--muted);min-width:0}
+label.span2{grid-column:span 2}
+input,select{font:inherit;color:var(--ink);background:var(--input);border:1px solid var(--line);border-radius:6px;padding:6px 8px;width:100%;min-width:0}
+input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px}
+input.bad{border-color:var(--err);background:var(--err-bg)}
+input[readonly]{opacity:.75}
+button{font:inherit;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:6px;padding:6px 11px;cursor:pointer;white-space:nowrap}
+button:hover{border-color:var(--accent)}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+button.ghost{border-color:transparent;background:transparent;color:var(--muted)}
+button.danger:hover{border-color:var(--err);color:var(--err)}
+button:disabled{opacity:.5;cursor:not-allowed}
+.hawb{border:1px solid var(--line);border-radius:10px;margin-bottom:12px;background:var(--panel)}
+.hawb-head{display:flex;gap:10px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line);flex-wrap:wrap;background:var(--soft);border-radius:10px 10px 0 0}
+.hawb-head .num{font-weight:700;font-size:15px}
+.hawb-body{padding:12px 14px}
+.sub{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:12px 0 6px}
+.preview{font-size:11px;color:var(--muted);margin-top:4px;word-break:break-word}
+.preview code{color:var(--ink)}
+table.items{width:100%;border-collapse:collapse}
+table.items th{font-size:11px;font-weight:500;color:var(--muted);text-align:left;padding:4px 6px}
+table.items td{padding:3px 4px;vertical-align:middle}
+table.items td.val{text-align:right;font-family:ui-monospace,Menlo,monospace;white-space:nowrap;padding-right:8px}
+.hts-cell{display:flex;gap:4px}
+.hts-cell input{font-family:ui-monospace,Menlo,monospace}
+.sugg{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.chip{font-size:11px;padding:2px 8px;border-radius:999px;background:var(--soft);border:1px solid transparent;color:var(--ink)}
+.chip small{color:var(--muted)}
+.chip.on{border-color:var(--accent);background:var(--accent);color:var(--accent-ink)}
+.chip.on small{color:var(--accent-ink);opacity:.8}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;background:var(--soft);color:var(--accent)}
+.issues{list-style:none;margin:0;padding:0;max-height:220px;overflow:auto}
+.issues li{padding:5px 8px;border-radius:5px;margin-bottom:3px;font-size:13px}
+.issues li.e{background:var(--err-bg);color:var(--err)}
+.issues li.w{background:var(--warn-bg);color:var(--warn)}
+.ok{color:var(--ok)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.seg button{border:0;border-radius:0}
+.seg button.on{background:var(--accent);color:var(--accent-ink)}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+details summary{cursor:pointer;color:var(--muted);font-size:13px}
+.tablewrap{overflow:auto;max-height:340px;border:1px solid var(--line);border-radius:6px}
+table.prev{border-collapse:collapse;font:11px ui-monospace,Menlo,monospace;white-space:nowrap}
+table.prev td{border-bottom:1px solid var(--line);border-right:1px solid var(--line);padding:3px 6px}
+table.prev tr.h td{background:var(--soft)}
+dialog{border:1px solid var(--line);border-radius:12px;background:var(--panel);color:var(--ink);width:min(760px,96vw);padding:0}
+dialog::backdrop{background:rgba(0,0,0,.4)}
+.dlg-head{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;gap:8px;align-items:center}
+.dlg-body{padding:12px 16px;max-height:65vh;overflow:auto}
+.res{display:flex;gap:10px;align-items:flex-start;padding:7px 8px;border-radius:6px;cursor:pointer;border:1px solid transparent}
+.res:hover{border-color:var(--accent);background:var(--soft)}
+.res .c{font-family:ui-monospace,Menlo,monospace;font-weight:600;min-width:118px}
+.res .d{font-size:13px}.res .p{font-size:11px;color:var(--muted)}
+.res .duty{font-size:11px;color:var(--muted);margin-left:auto;white-space:nowrap}
+.note{font-size:12px;color:var(--muted)}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:99}
+.toast.show{opacity:1}
+@media (max-width:640px){label.span2{grid-column:span 1}.bar h1{width:100%}}
+</style>
+</head>
+<body>
+<header><div class="bar">
+  <h1>Direct USA Manifest → CSV</h1>
+  <span class="stat">HAWBs <b id="sH">0</b></span>
+  <span class="stat">Items <b id="sC">0</b></span>
+  <span class="stat">Total value <b id="sV">0.00</b></span>
+  <span class="stat" id="sI"></span>
+  <span class="spacer"></span>
+  <button id="btnImport">Import CSV</button>
+  <button id="btnNew" class="danger">New manifest</button>
+  <button id="btnDownload" class="primary">Download CSV</button>
+  <button id="btnXlsx" class="primary">Download Manifest Excel</button>
+  <input type="file" id="fileIn" accept=".csv,text/csv" hidden>
+</div></header>
+
+<main>
+<section class="card">
+  <h2>Manifest</h2>
+  <div class="grid">
+    <label>Airline prefix<input data-m="prefix" class="mono"></label>
+    <label>MAWB number (8 digits)<input data-m="mawbNo" class="mono"></label>
+    <label>Origin<input data-m="origin"></label>
+    <label>Destination<input data-m="dest"></label>
+    <label>Flight reference (CSV)<input data-m="flight" class="mono" placeholder="TK0011-16-10-26"></label>
+    <label>Flight number (Excel)<input data-m="flightNo" class="mono" placeholder="TK0011"></label>
+    <label>Flight date (Excel)<input data-m="flightDate" type="date"></label>
+    <label>Formatted MAWB (auto)<input id="mawbFmt" readonly class="mono"></label>
+    <label>Account email (CSV)<input data-m="acctEmail"></label>
+    <label>Account email (Excel)<input data-m="xlEmail"></label>
+    <label>Output file name<input data-m="fileName"></label>
+  </div>
+  <div class="sub">Declared value</div>
+  <div class="row">
+    <div class="seg" id="modeSeg">
+      <button data-mode="manifest">Split manifest total</button>
+      <button data-mode="hawb">Enter value per HAWB</button>
+    </div>
+    <label style="width:170px" id="targetWrap">Manifest total (USD)<input data-m="target" class="mono" inputmode="decimal"></label>
+    <span class="note" id="modeNote"></span>
+  </div>
+  <div class="row" style="margin-top:10px">
+    <span class="note" style="min-width:150px">Split HAWB value across items</span>
+    <div class="seg" id="splitSeg">
+      <button data-split="random">Random</button>
+      <button data-split="qty">By quantity</button>
+    </div>
+    <button id="btnShuffleAll" title="New random split for every HAWB">🎲 Shuffle all</button>
+    <span class="note" id="splitNote"></span>
+  </div>
+  <details style="margin-top:12px"><summary>Fixed values (already match the correct file — change only if needed)</summary>
+    <div class="grid" style="margin-top:10px" id="defaultsGrid"></div>
+  </details>
+</section>
+
+<div id="hawbList"></div>
+<div class="row" style="margin-bottom:14px">
+  <button id="btnAddHawb" class="primary">+ Add HAWB</button>
+  <span class="note">New HAWB numbers continue from the last one. Blank columns in the CSV stay blank automatically.</span>
+</div>
+
+<section class="card">
+  <h2>Checks</h2>
+  <ul class="issues" id="issues"></ul>
+</section>
+
+<section class="card">
+  <h2>CSV preview</h2>
+  <p class="note">UTF-8 with BOM, CRLF line endings, 54 columns on every line, values with 2 decimals — same as the correct file.</p>
+  <div class="tablewrap"><table class="prev" id="prev"></table></div>
+</section>
+</main>
+
+<dialog id="htsDlg">
+  <div class="dlg-head">
+    <input id="htsQ" placeholder="Search item, e.g. cotton shawl" style="flex:1">
+    <button id="htsGo" class="primary">Search HTS</button>
+    <button id="htsClose" class="ghost">Close</button>
+  </div>
+  <div class="dlg-body">
+    <div class="sub" style="margin-top:0">Type a code yourself</div>
+    <div class="row"><input id="htsManual" class="mono" placeholder="0000.00.00.00" style="width:180px"><button id="htsUseManual">Use this code</button></div>
+    <div class="sub">Saved codes</div>
+    <div id="htsSaved"></div>
+    <div class="sub">Live results from hts.usitc.gov</div>
+    <div id="htsLive" class="note">Press “Search HTS”.</div>
+  </div>
+</dialog>
+<div class="toast" id="toast"></div>
+
+<script id="core">
+/* ---------- core: pure functions, no DOM ---------- */
+const HEADER_LINE = "# record_type,record_version,profile_key,hawb,ship_ref_num,internal_reference,vend_ref_num,origin,final_destination,outlying,service_provider,dls_station,dls_final_destination,num_pieces,weight,weight_unit,contents,currency_code,declared_value,insurance_amount,description,hts_code,fda_prior_notice,terms,packaging,service_type,collect_amount,cust_key,ship_acct_num,dls_acct_num,ext_cust_acct,shipper_name,shipper_address1,shipper_address2,shipper_city,shipper_state,shipper_zip,shipper_country,shipper_phone,consignee_person,consignee_company,consignee_street_1,consignee_street_2,consignee_city,consignee_state,consignee_postal_code,consignee_country,consignee_phone,consignee_email,consignee_tax_id,comment,goods_coo,incoming_container,mid";
+const NCOL = 54;
+
+const DEFAULT_FIXED = {
+  emailCol2:"1", emailCol3:"All",
+  mawbVersion:"1",
+  hawbVersion:"14", vendRef:"PK", weightUnit:"K", currency:"USD",
+  shipperCity:"KHI", shipperState:"SD", shipperZip:"75400", shipperCountry:"PK", shipperPhone:"9.22E+11",
+  shipperSuffix:", KARACHI, Pakistan, 75400",
+  consCountry:"US", consCountryName:"United States", consEmail:"MEHMOODARSHI@YMAIL.COM",
+  streetStyle:"state",            // "state" => ", CITY, ST, United States, ZIP"   "nostate" => ", CITY, United States, ZIP"
+  commVersion:"4", commCountry:"PK",
+  xlEmailCol3:"all", xlContents:"APX", xlPackaging:"B"    // Excel-only fixed values (from the sample file)
+};
+
+function newState(){
+  return {
+    m:{prefix:"235", mawbNo:"", origin:"KHI", dest:"JFK", flight:"", acctEmail:"INFO@ZEXINTL.COM",
+       fileName:"DIRECT_USA_MANIFEST", target:"1250",
+       flightNo:"", flightDate:"", xlEmail:"support@expership.com"},
+    mode:"manifest",
+    itemSplit:"random",            // "random" = random split per HAWB (exact total) | "qty" = by quantity
+    fx:Object.assign({}, DEFAULT_FIXED),
+    hawbs:[]
+  };
+}
+function newHawb(no){
+  return {hawb:no||"", pcs:"1", weight:"", value:"", shipperName:"", shipperAddr:"", shipperAddr2:"", shipperFull:"",
+    consPerson:"", consAddr:"", consAddr2:"", consFull:"", city:"", state:"", zip:"", phone:"", consEmail:"",
+    htsOverride:"", seed:newSeed(), items:[newItem()]};
+}
+function newSeed(){ return (Math.random()*4294967296)>>>0 || 1; }
+function newItem(){ return {name:"", units:"1", hts:""}; }
+
+function num(v){ const n=parseFloat(String(v).replace(/,/g,"")); return isFinite(n)?n:0; }
+function toCents(v){ return Math.round(num(v)*100); }
+function money(c){ return (c/100).toFixed(2); }
+
+/* Largest-remainder split: shares exactly sum to totalCents; ties go to the earlier row.
+   Verified against the correct file: reproduces every HAWB value and the commodity split rule. */
+function alloc(totalCents, weights){
+  const W = weights.reduce((a,b)=>a+b,0);
+  if(!(W>0)) return weights.map(()=>0);
+  const raw = weights.map(w=>totalCents*w/W);
+  const base = raw.map(x=>Math.floor(x+1e-9));
+  let rem = totalCents - base.reduce((a,b)=>a+b,0);
+  const order = raw.map((x,i)=>i).sort((a,b)=>((raw[b]-base[b])-(raw[a]-base[a]))||a-b);
+  for(let k=0;k<order.length && rem>0;k++,rem--) base[order[k]]++;
+  return base;
+}
+
+function itemUnits(h){ return h.items.map(it=>Math.max(0,num(it.units))); }
+
+/* Returns {hawbCents:[...], itemCents:[[...]]} */
+function computeValues(st){
+  let hawbCents;
+  if(st.mode==="manifest"){
+    const sums = st.hawbs.map(h=>itemUnits(h).reduce((a,b)=>a+b,0));
+    hawbCents = alloc(toCents(st.m.target), sums);
+  } else {
+    hawbCents = st.hawbs.map(h=>toCents(h.value));
+  }
+  const itemCents = st.hawbs.map((h,i)=> st.itemSplit==="random"
+    ? randomSplit(hawbCents[i], itemUnits(h), h.seed)
+    : alloc(hawbCents[i], itemUnits(h)));
+  return {hawbCents, itemCents};
+}
+
+/* Seeded PRNG (mulberry32): same seed -> same numbers, so values stay put while you type.
+   "Shuffle" gives the HAWB a new seed. */
+function rng(seed){
+  let a=(seed>>>0)||1;
+  return ()=>{ a=(a+0x6D2B79F5)>>>0; let t=a; t=Math.imul(t^(t>>>15),t|1); t^=t+Math.imul(t^(t>>>7),t|61); return ((t^(t>>>14))>>>0)/4294967296; };
+}
+/* Random split that still sums exactly to totalCents.
+   Each item's weight = its quantity × a random factor between 0.5 and 1.5,
+   so an item with qty 3 still tends to get more than one with qty 1, but numbers look uneven. */
+function randomSplit(totalCents, units, seed){
+  const r=rng(seed);
+  const w=units.map(u=> u>0 ? u*(0.5+r()) : 0);
+  return alloc(totalCents, w);
+}
+
+function fmtMawb(prefix, no){
+  const n=String(no||"").replace(/\D/g,"");
+  return n ? `${prefix}-${n.slice(0,4)}-${n.slice(4)}` : "";
+}
+function clean(s){ return String(s==null?"":s).replace(/[\r\n\t]+/g," ").trim(); }
+function shipperLine(h,fx){
+  const a=[clean(h.shipperAddr),clean(h.shipperAddr2)].filter(Boolean).join(" ");
+  return clean(h.shipperFull) || (a ? a+fx.shipperSuffix : "");
+}
+function consLine(h,fx){
+  if(clean(h.consFull)) return clean(h.consFull);
+  const a=[clean(h.consAddr).replace(/,\s*$/,""),clean(h.consAddr2)].filter(Boolean).join(", "); if(!a) return "";
+  const city=clean(h.city), st=clean(h.state).toUpperCase(), zip=clean(h.zip);
+  return fx.streetStyle==="state"
+    ? `${a}, ${city}, ${st}, ${fx.consCountryName}, ${zip}`
+    : `${a}, ${city}, ${fx.consCountryName}, ${zip}`;
+}
+function hawbHts(h){ return clean(h.htsOverride) || clean((h.items[0]||{}).hts); }
+
+function pad(arr){ const r=arr.slice(0,NCOL); while(r.length<NCOL) r.push(""); return r; }
+
+function buildRows(st){
+  const fx=st.fx, m=st.m, v=computeValues(st);
+  const rows=[];
+  rows.push(pad(["email", fx.emailCol2, fx.emailCol3, clean(m.acctEmail)]));
+  rows.push(pad(["mawb", fx.mawbVersion, clean(m.prefix), clean(m.mawbNo), clean(m.origin), clean(m.dest), clean(m.flight), fmtMawb(clean(m.prefix), m.mawbNo)]));
+  rows.push(HEADER_LINE.split(","));
+  st.hawbs.forEach((h,i)=>{
+    const r=pad([]);
+    const hts=hawbHts(h);
+    r[0]="HAWB"; r[1]=fx.hawbVersion; r[3]=clean(h.hawb); r[5]=hts; r[6]=fx.vendRef;
+    r[7]=clean(m.origin); r[8]=clean(m.dest); r[13]=clean(h.pcs); r[14]=clean(h.weight); r[15]=fx.weightUnit;
+    r[17]=fx.currency; r[18]=money(v.hawbCents[i]);
+    r[20]=h.items.map(it=>clean(it.name)).join(" | "); r[21]=hts;
+    r[31]=clean(h.shipperName); r[32]=shipperLine(h,fx);
+    r[34]=fx.shipperCity; r[35]=fx.shipperState; r[36]=fx.shipperZip; r[37]=fx.shipperCountry; r[38]=fx.shipperPhone;
+    r[39]=clean(h.consPerson); r[41]=consLine(h,fx);
+    r[43]=clean(h.city); r[44]=clean(h.state).toUpperCase(); r[45]=clean(h.zip); r[46]=fx.consCountry;
+    r[47]=clean(h.phone); r[48]=clean(h.consEmail)||fx.consEmail;
+    rows.push(r);
+    h.items.forEach((it,k)=>{
+      const c=pad([]);
+      c[0]="COMMODITY"; c[1]=fx.commVersion; c[3]=clean(it.name); c[5]=clean(it.hts); c[6]=fx.commCountry;
+      c[7]=money(v.itemCents[i][k]);
+      rows.push(c);
+    });
+  });
+  return rows;
+}
+
+function csvField(s){ s=String(s); return /[",\r\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; }
+function toCSV(rows){
+  // header line is written verbatim (it is a single-cell comment row in the original)
+  return "﻿" + rows.map((r,i)=> i===2 ? HEADER_LINE : r.map(csvField).join(",")).join("\r\n") + "\r\n";
+}
+
+/* ---------- Excel manifest (layout copied from "235-3583-6570 - Manifest.xlsx") ----------
+   Cells are JS numbers (stored as numbers) or strings (stored as text); "" = blank cell.
+   Differences from the CSV, all taken from the sample:
+   - row types lowercase (hawb / commodity), email line col C "all"
+   - mawb row: D = flight date YYYYMMDD, G = flight number, H = prefix-8digits
+   - HTS written without dots as a number (F and V on hawb rows, F on commodity rows)
+   - Q = APX, Y = B on every hawb row; G (vend_ref) and AM (shipper phone) blank
+   - shipper address split into AG/AH, consignee street into AP/AQ (no city/zip added)
+   - commodity rows only when the HAWB has 2+ items                                    */
+const XL_WIDTHS=[11.73,12.73,9.45,25.54,11.54,15.73,12,12.45,14.27,7.09,14.09,9.63,17.54,10.54,6.09,10,8,12.73,13.09,15.91,
+  211.73,10.82,13.91,5.54,9,10.91,13.45,7.91,13.09,12,12.09,30.54,26,23.73,10.54,11.82,9.91,13.82,12.63,33.36,17.45,27.18,
+  17.27,14.91,14.18,19.91,16.09,15,14.45,14.73,8.54,9.45,16.82,3.82];
+function xlNum(v){                 // digits-only text -> number (keeps typing like "75400" numeric, like the sample)
+  const s=clean(v);
+  if(/^\d{1,15}$/.test(s)) return Number(s);
+  if(/^\d*\.\d+$/.test(s) || /^\d+\.\d*$/.test(s)) return Number(s);
+  return s;
+}
+function xlHts(code){ const d=clean(code).replace(/\./g,""); return /^\d{1,15}$/.test(d)?Number(d):clean(code); }
+function xlDate(d){ const s=clean(d).replace(/\D/g,""); return /^\d{8}$/.test(s)?Number(s):clean(d); }
+
+/* Excel needs the street only. When the separate fields are empty (e.g. after a CSV import, or the
+   "Full ... line" advanced fields were used), take the full line and strip what the CSV added. */
+function reEsc(s){ return String(s).replace(/[.*+?^${}()|[\]\\]/g,"\\$&"); }
+function xlShipperAddr(h,fx){
+  if(clean(h.shipperAddr)) return [clean(h.shipperAddr), clean(h.shipperAddr2||"")];
+  let f=clean(h.shipperFull); if(!f) return ["",""];
+  const suf=clean(fx.shipperSuffix).replace(/^,\s*/,"");
+  if(suf) f=f.replace(new RegExp(",\\s*"+reEsc(suf).replace(/,\s*/g,",\\s*")+"$","i"),"");
+  else f=f.replace(/,\s*KARACHI\s*,\s*Pakistan\s*,?\s*\d*\s*$/i,"");
+  return [f.trim(), ""];
+}
+function xlConsAddr(h,fx){
+  if(clean(h.consAddr)) return [clean(h.consAddr), clean(h.consAddr2||"")];
+  let f=clean(h.consFull); if(!f) return ["",""];
+  const city=reEsc(clean(h.city)), st=reEsc(clean(h.state)), zip=clean(h.zip).replace(/^0+/,""), cn=reEsc(clean(fx.consCountryName)||"United States");
+  // ", CITY, ST, United States, ZIP"  or  ", CITY, United States, ZIP"  (ZIP with or without leading zero)
+  const tail=new RegExp(`,\\s*${city}\\s*,\\s*(?:${st}\\s*,\\s*)?(?:${cn}|USA|US)\\s*,?\\s*0*${reEsc(zip)}(?:-\\d{4})?\\s*$`,"i");
+  if(city && tail.test(f)) f=f.replace(tail,"");
+  else f=f.replace(/,\s*(?:United States|USA|US)\s*,?\s*\d{3,5}(?:-\d{4})?\s*$/i,"");   // at least drop country + zip
+  return [f.replace(/,\s*$/,"").trim(), ""];
+}
+
+function buildXlsxRows(st){
+  const fx=st.fx, m=st.m, v=computeValues(st), prefix=clean(m.prefix), mno=clean(m.mawbNo).replace(/\D/g,"");
+  const rows=[];
+  rows.push(pad(["email", xlNum(fx.emailCol2), clean(fx.xlEmailCol3), clean(m.xlEmail)]));
+  rows.push(pad(["mawb", xlNum(fx.mawbVersion), xlNum(prefix), xlDate(m.flightDate), clean(m.origin), clean(m.dest),
+    clean(m.flightNo), mno ? `${prefix}-${mno}` : ""]));
+  rows.push(HEADER_LINE.split(","));
+  st.hawbs.forEach((h,i)=>{
+    const r=pad([]), hts=xlHts(hawbHts(h));
+    r[0]="hawb"; r[1]=xlNum(fx.hawbVersion); r[3]=xlNum(h.hawb); r[5]=hts;
+    r[7]=clean(m.origin); r[8]=clean(m.dest); r[13]=xlNum(h.pcs); r[14]=xlNum(h.weight); r[15]=clean(fx.weightUnit);
+    r[16]=clean(fx.xlContents); r[17]=clean(fx.currency); r[18]=v.hawbCents[i]/100;
+    r[20]=h.items.map(it=>clean(it.name)).join(" | "); r[21]=hts; r[24]=clean(fx.xlPackaging);
+    const sa=xlShipperAddr(h,fx), ca=xlConsAddr(h,fx);
+    r[31]=clean(h.shipperName); r[32]=sa[0]; r[33]=sa[1];
+    r[34]=clean(fx.shipperCity); r[35]=clean(fx.shipperState); r[36]=xlNum(fx.shipperZip); r[37]=clean(fx.shipperCountry);
+    r[39]=clean(h.consPerson); r[41]=ca[0]; r[42]=ca[1];
+    r[43]=clean(h.city); r[44]=clean(h.state).toUpperCase(); r[45]=clean(h.zip);   // ZIP kept as text so 06320 keeps its zero
+    r[46]=clean(fx.consCountry); r[47]=xlNum(h.phone);
+    rows.push(r);
+    if(h.items.length>1) h.items.forEach((it,k)=>{
+      const c=pad([]);
+      c[0]="commodity"; c[1]=xlNum(fx.commVersion); c[3]=clean(it.name); c[5]=xlHts(it.hts); c[6]=clean(fx.commCountry);
+      c[7]=v.itemCents[i][k]/100;
+      rows.push(c);
+    });
+  });
+  return rows;
+}
+
+/* Minimal .xlsx writer: inline strings, one sheet, stored (uncompressed) zip. Returns Uint8Array. */
+function colName(n){ let s=""; n++; while(n>0){ const r=(n-1)%26; s=String.fromCharCode(65+r)+s; n=Math.floor((n-1)/26); } return s; }
+function xmlEsc(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,""); }
+/* Same view as the sample: AutoFilter on A3:BB<last> showing only "hawb" in column A.
+   Excel does not re-run a filter when opening, so commodity rows are also marked hidden. */
+function sheetXml(rows, widths){
+  const cols=widths.map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join("");
+  const last=Math.max(3,rows.length), ref=`A3:${colName(NCOL-1)}${last}`;
+  const filter=`<autoFilter ref="${ref}"><filterColumn colId="0"><filters><filter val="hawb"/></filters></filterColumn></autoFilter>`;
+  const body=rows.map((r,ri)=>{
+    const hide = ri>2 && String(r[0]).toLowerCase()!=="hawb" ? ' hidden="1"' : "";
+    const cells=r.map((v,ci)=>{
+      if(v===""||v==null) return "";
+      const ref=colName(ci)+(ri+1);
+      if(typeof v==="number" && isFinite(v)) return `<c r="${ref}"><v>${v}</v></c>`;
+      const s=String(v), sp=/^\s|\s$/.test(s)?' xml:space="preserve"':"";
+      return `<c r="${ref}" t="inlineStr"><is><t${sp}>${xmlEsc(s)}</t></is></c>`;
+    }).join("");
+    return `<row r="${ri+1}"${hide}>${cells}</row>`;
+  }).join("");
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetPr filterMode="1"/><cols>${cols}</cols><sheetData>${body}</sheetData>${filter}</worksheet>`;
+}
+function workbookXml(nrows){
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Sheet1" sheetId="1" r:id="rId1"/></sheets><definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="0" hidden="1">Sheet1!$A$3:$${colName(NCOL-1)}$${Math.max(3,nrows)}</definedName></definedNames></workbook>`;
+}
+const XL_FILES={
+  "[Content_Types].xml":`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`,
+  "_rels/.rels":`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`,
+  "xl/workbook.xml":`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Sheet1" sheetId="1" r:id="rId1"/></sheets></workbook>`,
+  "xl/_rels/workbook.xml.rels":`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`,
+  "xl/styles.xml":`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="1"><font><sz val="11"/><name val="Aptos Narrow"/><family val="2"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`
+};
+const CRC_T=(()=>{ const t=new Uint32Array(256); for(let n=0;n<256;n++){ let c=n; for(let k=0;k<8;k++) c=c&1?0xEDB88320^(c>>>1):c>>>1; t[n]=c>>>0; } return t; })();
+function crc32(b){ let c=0xFFFFFFFF; for(let i=0;i<b.length;i++) c=CRC_T[(c^b[i])&255]^(c>>>8); return (c^0xFFFFFFFF)>>>0; }
+function zipStore(files){            // files: [[name, Uint8Array]]
+  const enc=new TextEncoder(), parts=[], central=[]; let off=0;
+  const u16=v=>[v&255,(v>>>8)&255], u32=v=>[v&255,(v>>>8)&255,(v>>>16)&255,(v>>>24)&255];
+  for(const [name,data] of files){
+    const nb=enc.encode(name), crc=crc32(data), sz=data.length;
+    const common=[...u16(20),...u16(0x0800),...u16(0),...u16(0),...u16(0x21),...u32(crc),...u32(sz),...u32(sz),...u16(nb.length),...u16(0)];
+    const local=new Uint8Array([...u32(0x04034b50),...common,...nb]);
+    parts.push(local,data);
+    central.push(new Uint8Array([...u32(0x02014b50),...u16(20),...common,...u16(0),...u16(0),...u16(0),...u32(0),...u32(off),...nb]));
+    off+=local.length+sz;
+  }
+  const cdSize=central.reduce((a,b)=>a+b.length,0);
+  const end=new Uint8Array([...u32(0x06054b50),...u16(0),...u16(0),...u16(files.length),...u16(files.length),...u32(cdSize),...u32(off),...u16(0)]);
+  const all=[...parts,...central,end], out=new Uint8Array(all.reduce((a,b)=>a+b.length,0));
+  let p=0; for(const a of all){ out.set(a,p); p+=a.length; }
+  return out;
+}
+function toXlsx(rows){
+  const enc=new TextEncoder();
+  const files=Object.entries(XL_FILES).map(([n,x])=>[n,enc.encode(n==="xl/workbook.xml"?workbookXml(rows.length):x)]);
+  files.push(["xl/worksheets/sheet1.xml", enc.encode(sheetXml(rows, XL_WIDTHS))]);
+  return zipStore(files);
+}
+
+function parseCSV(text){
+  text=text.replace(/^﻿/,"");
+  const rows=[]; let row=[], f="", q=false;
+  for(let i=0;i<text.length;i++){
+    const ch=text[i];
+    if(q){ if(ch==='"'){ if(text[i+1]==='"'){f+='"';i++;} else q=false; } else f+=ch; }
+    else if(ch==='"') q=true;
+    else if(ch===','){ row.push(f); f=""; }
+    else if(ch==='\r' || ch==='\n'){            // handles CRLF, LF and CR-only (Mac Excel)
+      if(ch==='\r' && text[i+1]==='\n') i++;
+      row.push(f); rows.push(row); row=[]; f="";
+    }
+    else f+=ch;
+  }
+  if(f!==""||row.length){ row.push(f); rows.push(row); }
+  return rows.map(r=>{ while(r.length<NCOL) r.push(""); return r; });   // short rows (trimmed by Excel) padded to 54
+}
+
+/* Import a file in this format. Values are kept exactly (units = current values). */
+function importCSV(text){
+  const rows=parseCSV(text), st=newState();
+  st.mode="hawb";
+  st.itemSplit="qty";   // imported item values are stored as units, so the qty split reproduces them exactly
+  const fx=st.fx;
+  let cur=null;
+  for(const r of rows){
+    const t=(r[0]||"").trim();
+    if(t==="email"){ fx.emailCol2=r[1]||"1"; fx.emailCol3=r[2]||"All"; st.m.acctEmail=r[3]||""; }
+    else if(t==="mawb"){ fx.mawbVersion=r[1]||"1"; st.m.prefix=r[2]||""; st.m.mawbNo=r[3]||""; st.m.origin=r[4]||""; st.m.dest=r[5]||""; st.m.flight=r[6]||""; }
+    else if(t==="HAWB"){
+      fx.hawbVersion=r[1]; fx.vendRef=r[6]; fx.weightUnit=r[15]; fx.currency=r[17];
+      fx.shipperCity=r[34]; fx.shipperState=r[35]; fx.shipperZip=r[36]; fx.shipperCountry=r[37]; fx.shipperPhone=r[38];
+      fx.consCountry=r[46];
+      cur={hawb:r[3], pcs:r[13], weight:r[14], value:r[18], shipperName:r[31], shipperAddr:"", shipperFull:r[32],
+        consPerson:r[39], consAddr:"", consFull:r[41], city:r[43], state:r[44], zip:r[45], phone:r[47],
+        consEmail:r[48], htsOverride:r[5], seed:newSeed(), items:[]};
+      if(r[48]) fx.consEmail=r[48];
+      st.hawbs.push(cur);
+    }
+    else if(t==="COMMODITY" && cur){
+      fx.commVersion=r[1]; fx.commCountry=r[6];
+      cur.items.push({name:r[3], units:r[7], hts:r[5]});
+    }
+  }
+  st.notes=[];
+  if(!st.hawbs.length) throw new Error("No HAWB rows found. Is this a Direct USA manifest CSV?");
+  st.hawbs.forEach(h=>{
+    if(/^\d{3,4}$/.test(clean(h.zip))){         // Excel strips leading zeros: 6320 -> 06320
+      const z=clean(h.zip).padStart(5,"0");
+      st.notes.push(`${h.hawb}: ZIP ${h.zip} restored to ${z}`);
+      if(h.consFull) h.consFull=h.consFull.replace(new RegExp(`(, )${clean(h.zip)}$`),`$1${z}`);
+      h.zip=z;
+    }
+    if(h.consEmail===fx.consEmail) h.consEmail="";
+    if(h.items.length && h.htsOverride===clean(h.items[0].hts)) h.htsOverride="";
+    if(!h.items.length) h.items.push(newItem());
+  });
+  const tot=st.hawbs.reduce((a,h)=>a+toCents(h.value),0);
+  st.m.target=money(tot);
+  return st;
+}
+
+const HTS_RE=/^\d{4}\.\d{2}\.\d{2}\.\d{2}$/;
+function validate(st){
+  const out=[], seen={};
+  const v=computeValues(st);
+  if(!/^\d{8}$/.test(clean(st.m.mawbNo))) out.push(["e","MAWB number must be 8 digits."]);
+  if(!clean(st.m.flight)) out.push(["e","Flight reference is empty."]);
+  if(!clean(st.m.flightNo)) out.push(["w","Excel: flight number is empty (cell G2)."]);
+  if(!/^\d{4}-?\d{2}-?\d{2}$/.test(clean(st.m.flightDate))) out.push(["w","Excel: flight date is empty (cell D2)."]);
+  if(!clean(st.m.xlEmail)) out.push(["w","Excel: account email is empty (cell D1)."]);
+  if(st.mode==="manifest" && !(num(st.m.target)>0)) out.push(["e","Manifest total is empty."]);
+  if(!st.hawbs.length) out.push(["e","Add at least one HAWB."]);
+  st.hawbs.forEach((h,i)=>{
+    const id=clean(h.hawb)||`HAWB #${i+1}`;
+    const n=clean(h.hawb);
+    if(!n) out.push(["e",`${id}: HAWB number is empty.`]);
+    else if(seen[n]) out.push(["e",`${id}: duplicate HAWB number.`]); seen[n]=1;
+    if(!(num(h.pcs)>0)) out.push(["e",`${id}: pieces missing.`]);
+    if(!(num(h.weight)>0)) out.push(["e",`${id}: weight missing.`]);
+    if(!clean(h.shipperName)) out.push(["e",`${id}: shipper name missing.`]);
+    if(!shipperLine(h,st.fx)) out.push(["e",`${id}: shipper address missing.`]);
+    if(!clean(h.consPerson)) out.push(["e",`${id}: consignee name missing.`]);
+    if(!consLine(h,st.fx)) out.push(["e",`${id}: consignee address missing.`]);
+    if(!clean(h.city)) out.push(["e",`${id}: consignee city missing.`]);
+    if(!/^[A-Za-z]{2}$/.test(clean(h.state))) out.push(["e",`${id}: state must be a 2-letter code (e.g. TX).`]);
+    if(!/^\d{5}$/.test(clean(h.zip))) out.push(["e",`${id}: ZIP must be 5 digits (keep leading zero, e.g. 06320).`]);
+    if(!clean(h.phone)) out.push(["w",`${id}: consignee phone empty.`]);
+    else if(/e\+/i.test(clean(h.phone))) out.push(["e",`${id}: phone ${clean(h.phone)} was damaged by Excel (digits lost) — retype the full number.`]);
+    if(/e\+/i.test(clean(h.hawb))) out.push(["e",`${id}: HAWB number was damaged by Excel — retype it.`]);
+    if(v.hawbCents[i]<=0) out.push(["e",`${id}: declared value is 0.`]);
+    if(clean(h.htsOverride) && !HTS_RE.test(clean(h.htsOverride))) out.push(["e",`${id}: HAWB HTS code must look like 0000.00.00.00.`]);
+    h.items.forEach((it,k)=>{
+      const lab=`${id} item ${k+1}`;
+      if(!clean(it.name)) out.push(["e",`${lab}: description missing.`]);
+      if(!(num(it.units)>0)) out.push(["e",`${lab}: quantity must be above 0.`]);
+      if(!clean(it.hts)) out.push(["e",`${lab}: HTS code missing.`]);
+      else if(!HTS_RE.test(clean(it.hts))) out.push(["e",`${lab}: HTS code must look like 0000.00.00.00 (got ${clean(it.hts)}).`]);
+      if(v.itemCents[i][k]<=0 && num(it.units)>0) out.push(["w",`${lab}: value rounds to 0.00.`]);
+    });
+  });
+  const total=v.hawbCents.reduce((a,b)=>a+b,0);
+  if(st.mode==="manifest" && st.hawbs.length && total!==toCents(st.m.target)) out.push(["e",`Total ${money(total)} does not equal manifest total.`]);
+  return out;
+}
+
+const SAVED_HTS = [["ARTIFICIAL JWELLERY PACKET",[["7117.90.75.00",1]]],["BED SHEET COTTON",[["6302.21.90.00",1]]],["BOOKS",[["4820.10.20.00",1]]],["CARD HOLDER",[["6110.20.20.30",1]]],["CLOTH BAGS",[["6305.20.00.00",1]]],["DOZEN GENTS CAP COTTON",[["6505.00.20.60",1]]],["EMBROIDERED MONOGRAM PACKET",[["5807.10.05.20",2],["5810.92.10.00",1]]],["EMPTY CLOTH BAG PACKET",[["6305.20.00.00",1]]],["FACE MASK",[["6307.90.98.70",1]]],["FLEECE HOODIE GENTS",[["6110.20.20.41",2]]],["GENTS CAP",[["6505.00.20.60",1]]],["GENTS COTTON HOODIES",[["6110.20.20.40",1]]],["GENTS COTTON JACKET",[["6201.30.50.51",3],["6201.30.20.50",1],["6110.20.20.41",1]]],["GENTS COTTON PAJAMA",[["6207.21.00.10",1]]],["GENTS FLEECE HOODIE",[["6110.20.20.41",1]]],["GENTS FLEECE HOODIES",[["6110.20.20.40",1]]],["GENTS LEATHER JACKET",[["4203.10.40.30",3]]],["GENTS SATIN JACKET",[["6201.93.35.11",1]]],["GENTS SHORT COTTON",[["6203.42.45.51",1]]],["GENTS T SHIRT COTTON",[["6109.10.00.12",2]]],["GENTS UPPER COTTON",[["7117.90.90.00",1]]],["GENTS WALLET",[["4202.31.60.00",1]]],["GENTS WOOL JACKET",[["6201.20.40.11",1]]],["GIRLS SUIT COTTON",[["6204.12.00.10",3],["6204.22.30.70",1]]],["HAIR ACCESSORIES",[["9615.90.00.00",1]]],["KEYCHAIN PACKET",[["7326.90.86.88",1]]],["KITCHEN ITEM",[["7323.93.00.00",1]]],["LADIES ABAYA",[["6211.43.10.90",1]]],["LADIES DUPATTA",[["6214.90.00.00",1],["6214.40.00.00",1]]],["LADIES STOLLER",[["6214.30.00.00",1]]],["LADIES SUITS COTTON",[["6204.12.00.10",1]]],["LADIES TROUSER",[["6204.63.35.10",1]]],["LEATHER SEAT COVER",[["9401.99.10.10",1]]],["LEATHER SEAT COVER SET",[["4205.00.90.00",2],["9401.99.10.10",1]]],["PAIR SMACK GLOVES",[["3926.20.20.00",1]]],["PARACHUTE JACKET GENTS",[["6201.93.35.11",2]]],["PARACHUTE JACKETS GENTS",[["6201.93.35.11",1]]],["PLASTIC DESK PEN HOLDER",[["3926.10.00.00",1]]],["POLY BAG PACKET",[["3923.21.00.95",1]]],["PRAYER BEADS TASBHEE",[["4901.99.00.93",1]]],["PRINTING MATERIAL PACKET",[["4823.90.86.00",1]]],["READING BOOKS",[["4820.10.20.20",1]]],["SATIN JACKET GENTS",[["6201.93.35.11",1]]],["SHOPPING BAGS",[["6307.90.98.91",1]]],["SUIT PLASTIC BAGS",[["3923.21.00.00",2]]],["TAG CARDS",[["4821.10.40.00",1]]],["THANK YOU CARDS",[["4909.00.40.00",1]]],["WALLET COVER",[["3926.90.99.89",1]]],["WOMEN ABAYA",[["6211.43.10.90",1]]],["WOMEN ABAYA COTTON",[["6211.42.10.10",1]]],["WOMEN KURTI COTTON",[["6206.30.30.40",1]]],["WOMEN PURSE",[["4202.22.15.00",1]]],["WOMEN SANDALS",[["6214.90.00.10",1]]],["WOMEN SCARF COTTON",[["6214.90.00.10",1]]],["WOMEN SHAWL",[["6201.40.10.00",1]]],["WOMEN SHAWL COTTON",[["6214.90.00.10",2]]],["WOMEN SHIRT COTTON",[["6206.30.30.11",1]]],["WOMEN SUIT COTTON",[["6204.12.00.10",12],["6204.22.30.70",11],["6204.22.30.65",2],["6204.22.10.00",1],["6204.12.00.30",1],["6103.39.90.00",1],["6214.90.00.10",1]]],["WOMEN SUITS COTTON",[["6204.12.00.10",12]]],["WOMEN SWEATER",[["6402.99.31.65",1]]],["WOMEN TOP COTTON",[["6206.30.00.30",1]]],["WOMEN TROUSER COTTON",[["6204.62.80.31",1],["6204.22.30.70",1]]],["WOMEN UNDERGARMENTS",[["6208.91.30.00",1]]],["WRESTLING BELTS",[["3926.90.55.00",1]]]];
+
+/* USITC result -> list of {code, desc, path, duty} with full 10-digit codes */
+function parseHtsResults(list){
+  const out=[], stack=[];
+  for(const r of (Array.isArray(list)?list:[])){
+    const ind=parseInt(r.indent||0,10)||0;
+    stack.length=ind; stack[ind]=clean(r.description).replace(/:$/,"");
+    let code=clean(r.htsno);
+    const suf=clean(r.statisticalSuffix);
+    if(/^\d{4}\.\d{2}\.\d{2}$/.test(code) && /^\d{2}$/.test(suf)) code=code+"."+suf;
+    if(!HTS_RE.test(code)) continue;
+    out.push({code, desc:clean(r.description), path:stack.slice(Math.max(0,ind-2),ind).filter(Boolean).join(" › "), duty:clean(r.general)});
+  }
+  return out;
+}
+/* ---- related-item HTS suggestions ---- */
+const SYN={LADIES:"WOMEN",LADY:"WOMEN",WOMAN:"WOMEN",WOMENS:"WOMEN",FEMALE:"WOMEN",
+  GENT:"GENTS",MEN:"GENTS",MENS:"GENTS",MAN:"GENTS",MALE:"GENTS",BOY:"BOYS",GIRL:"GIRLS",
+  JEWELLERY:"JWELLERY",JEWELRY:"JWELLERY",JEWELERY:"JWELLERY",PACKED:"PACKET",PACKETS:"PACKET",
+  TSHIRT:"TSHIRT",TEE:"TSHIRT",HOODY:"HOODIE",PAJAMAS:"PAJAMA",PYJAMA:"PAJAMA",PYJAMAS:"PAJAMA"};
+const STOP=new Set(["OF","AND","FOR","THE","PAIR","DOZEN","PCS","PC","SET"]);
+function normTokens(s){
+  let t=String(s||"").toUpperCase().replace(/T[\s-]*SHIRT/g,"TSHIRT").split(/[^A-Z0-9]+/).filter(Boolean);
+  return [...new Set(t.map(w=>{
+    if(SYN[w]) return SYN[w];
+    let x=w;
+    if(x.length>4 && x.endsWith("IES")) x=x.slice(0,-3)+"Y";
+    else if(x.length>3 && x.endsWith("S") && !x.endsWith("SS")) x=x.slice(0,-1);
+    return SYN[x]||x;
+  }).filter(w=>!STOP.has(w)))];
+}
+function tokSim(a,b){ if(a===b) return 1; if(a.length>=4&&b.length>=4&&(a.startsWith(b)||b.startsWith(a))) return .7; return 0; }
+/* library: [[name, [[code,count],...], mine?]]  -> best matches, one row per code */
+function suggestHts(name, library, limit){
+  const A=normTokens(name); if(!A.length) return [];
+  const best={};
+  for(const [n,codes,mine] of library){
+    const B=normTokens(n); if(!B.length) continue;
+    let hit=0; for(const a of A){ let m=0; for(const b of B) m=Math.max(m,tokSim(a,b)); hit+=m; }
+    if(hit<=0) continue;
+    const exact = A.length===B.length && A.every(a=>B.includes(a));
+    const score = hit/(A.length+B.length-hit) + (hit>=A.length?0.3:0) + (exact?1:0) + (mine?0.05:0);
+    for(const [code,count] of codes){
+      const s=score+Math.min(count,50)/1000;
+      if(!best[code] || best[code].score<s) best[code]={code,name:n,count,mine:!!mine,exact,score:s};
+    }
+  }
+  return Object.values(best).sort((x,y)=>y.score-x.score).slice(0,limit||6);
+}
+if(typeof module!=="undefined") module.exports={newState,newHawb,newItem,alloc,randomSplit,buildXlsxRows,toXlsx,computeValues,buildRows,toCSV,parseCSV,importCSV,validate,parseHtsResults,HTS_RE,normTokens,suggestHts,SAVED_HTS};
+</script>
+
+<script>
+/* ---------- UI ---------- */
+const KEY="directUsaManifest.v1", KEY_HTS="directUsaManifest.hts.v1";
+let st, userHts={};
+function load(){
+  try{ const s=localStorage.getItem(KEY); if(s){ st=JSON.parse(s); st.fx=Object.assign({},DEFAULT_FIXED,st.fx); } }catch(e){}
+  if(!st){ st=newState(); st.hawbs.push(newHawb("")); }
+  if(!st.itemSplit) st.itemSplit="random";
+  st.m=Object.assign(newState().m, st.m);              // adds new Excel fields to older saved manifests
+  st.hawbs.forEach(h=>{ if(!h.seed) h.seed=newSeed(); });
+  try{ userHts=JSON.parse(localStorage.getItem(KEY_HTS)||"{}")||{}; }catch(e){ userHts={}; }
+}
+let saveT; function save(){ clearTimeout(saveT); saveT=setTimeout(()=>{ try{localStorage.setItem(KEY,JSON.stringify(st));}catch(e){} },250); }
+function saveHts(){ try{localStorage.setItem(KEY_HTS,JSON.stringify(userHts));}catch(e){} }
+/* library = codes from the correct file (with how often each was used) + codes you picked yourself */
+function library(){
+  const lib=SAVED_HTS.map(([n,codes])=>[n,codes,false]);
+  Object.entries(userHts).forEach(([n,c])=>lib.push([n,[[c,0]],true]));
+  return lib;
+}
+function allNames(){ return [...new Set(library().map(x=>x[0]))].sort(); }
+function rememberHts(name,code){
+  const n=clean(name).toUpperCase(); if(!n || !HTS_RE.test(code)) return;
+  const fromFile=SAVED_HTS.find(([x])=>x===n);
+  if(fromFile && fromFile[1].some(([c])=>c===code)) return;   // already known from the correct file
+  userHts[n]=code; saveHts(); refreshDatalist();
+}
+function suggestionsHtml(it){
+  if(!clean(it.name)) return "";
+  const s=suggestHts(it.name, library(), 4);
+  if(!s.length) return `<div class="sugg note">No match in saved items — click Find to search the HTS site.</div>`;
+  return `<div class="sugg">${s.map(x=>`<button class="chip${x.code===clean(it.hts)?" on":""}" data-act="sg" data-code="${esc(x.code)}" title="${esc(x.name)}"><span class="mono">${esc(x.code)}</span> ${esc(x.name)} <small>${x.mine?"yours":x.count+"×"}</small></button>`).join("")}</div>`;
+}
+function updateSugg(i,k){
+  const box=document.querySelector(`[data-sg="${i}-${k}"]`); if(box) box.innerHTML=suggestionsHtml(st.hawbs[i].items[k]);
+}
+
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function toast(t){ const el=$("#toast"); el.textContent=t; el.classList.add("show"); setTimeout(()=>el.classList.remove("show"),1800); }
+
+const FIXED_LABELS=[["hawbVersion","HAWB record_version"],["vendRef","vend_ref_num"],["weightUnit","Weight unit"],["currency","Currency"],
+ ["shipperCity","Shipper city"],["shipperState","Shipper state"],["shipperZip","Shipper zip"],["shipperCountry","Shipper country"],
+ ["shipperPhone","Shipper phone"],["shipperSuffix","Added after shipper address"],["consCountry","Consignee country"],
+ ["consCountryName","Country name in street line"],["consEmail","Consignee email (default)"],["commVersion","COMMODITY record_version"],
+ ["commCountry","Commodity origin"],["xlContents","Excel: contents (col Q)"],["xlPackaging","Excel: packaging (col Y)"],["xlEmailCol3","Excel: email line col C"],["emailCol2","Email line col 2"],["emailCol3","Email line col 3"],["mawbVersion","MAWB line col 2"]];
+
+function renderManifest(){
+  document.querySelectorAll("[data-m]").forEach(el=>{ el.value=st.m[el.dataset.m]??""; });
+  $("#defaultsGrid").innerHTML = FIXED_LABELS.map(([k,l])=>`<label>${esc(l)}<input data-fx="${k}" value="${esc(st.fx[k])}"></label>`).join("")
+   + `<label>Consignee street line style<select data-fx="streetStyle">
+       <option value="state"${st.fx.streetStyle==="state"?" selected":""}>address, CITY, ST, United States, ZIP</option>
+       <option value="nostate"${st.fx.streetStyle==="nostate"?" selected":""}>address, CITY, United States, ZIP</option></select></label>`;
+  renderMode();
+}
+function renderMode(){
+  document.querySelectorAll("#modeSeg button").forEach(b=>b.classList.toggle("on",b.dataset.mode===st.mode));
+  $("#targetWrap").style.display = st.mode==="manifest"?"":"none";
+  $("#modeNote").textContent = st.mode==="manifest"
+    ? "Each HAWB gets total × (its quantity ÷ all quantities); each item gets its HAWB value × (item qty ÷ HAWB qty). Rounding cents go to the largest share, so totals match exactly."
+    : "Type each HAWB's declared value; it is split across its items as chosen below.";
+  document.querySelectorAll("#splitSeg button").forEach(b=>b.classList.toggle("on",b.dataset.split===st.itemSplit));
+  $("#btnShuffleAll").style.display = st.itemSplit==="random"?"":"none";
+  $("#splitNote").textContent = st.itemSplit==="random"
+    ? "Item values are random (bigger qty tends to get more) and always add up exactly to the HAWB value. Use 🎲 on a HAWB for a new split."
+    : "Each item gets HAWB value × (item qty ÷ HAWB qty).";
+  render();
+}
+
+function hawbCard(h,i){
+  const itemRows=h.items.map((it,k)=>`
+    <tr data-k="${k}">
+      <td><input data-it="name" list="itemNames" value="${esc(it.name)}" placeholder="e.g. WOMEN SUIT COTTON"><div data-sg="${i}-${k}">${suggestionsHtml(it)}</div></td>
+      <td style="width:90px"><input data-it="units" value="${esc(it.units)}" inputmode="decimal" class="mono"></td>
+      <td style="width:210px"><div class="hts-cell"><input data-it="hts" value="${esc(it.hts)}" placeholder="0000.00.00.00"><button data-act="hts" title="Search or pick HTS">Find</button></div></td>
+      <td class="val" data-val="${i}-${k}" style="width:80px"></td>
+      <td style="width:30px"><button class="ghost danger" data-act="delItem" title="Remove item">✕</button></td>
+    </tr>`).join("");
+  return `<div class="hawb" data-i="${i}">
+   <div class="hawb-head">
+     <span class="num mono">${esc(h.hawb)||"New HAWB"}</span>
+     <span class="pill" data-hv="${i}"></span>
+     <span class="spacer" style="flex:1"></span>
+     ${st.itemSplit==="random" && h.items.length>1?`<button data-act="shuffle" title="New random split of this HAWB's value">🎲 Shuffle</button>`:""}
+     <button data-act="up" title="Move up">↑</button><button data-act="down" title="Move down">↓</button>
+     <button data-act="dup">Duplicate</button>
+     <button class="danger" data-act="delHawb">Delete</button>
+   </div>
+   <div class="hawb-body">
+    <div class="grid">
+      <label>HAWB number<input data-h="hawb" value="${esc(h.hawb)}" class="mono"></label>
+      <label>Pieces<input data-h="pcs" value="${esc(h.pcs)}" inputmode="numeric"></label>
+      <label>Weight (kg)<input data-h="weight" value="${esc(h.weight)}" inputmode="decimal"></label>
+      ${st.mode==="hawb"?`<label>Declared value (USD)<input data-h="value" value="${esc(h.value)}" inputmode="decimal" class="mono"></label>`:""}
+    </div>
+    <div class="sub">Shipper (Pakistan)</div>
+    <div class="grid wide">
+      <label>Shipper name<input data-h="shipperName" value="${esc(h.shipperName)}"></label>
+      <label class="span2">Shipper address line 1 (without city/country)<input data-h="shipperAddr" value="${esc(h.shipperAddr)}" placeholder="HNO 704 C GULSHAN IQBAL"></label>
+      <label>Shipper address line 2<input data-h="shipperAddr2" value="${esc(h.shipperAddr2||"")}" placeholder="DHA PHS 6"></label>
+    </div>
+    <div class="preview" data-sp="${i}"></div>
+    <div class="sub">Consignee (USA)</div>
+    <div class="grid">
+      <label class="span2">Consignee name<input data-h="consPerson" value="${esc(h.consPerson)}"></label>
+      <label>Phone<input data-h="phone" value="${esc(h.phone)}" class="mono"></label>
+      <label>Email (blank = default)<input data-h="consEmail" value="${esc(h.consEmail)}"></label>
+      <label class="span2">Street address<input data-h="consAddr" value="${esc(h.consAddr)}" placeholder="6211 Bayard Drive"></label>
+      <label>Street 2 (apt, suite)<input data-h="consAddr2" value="${esc(h.consAddr2||"")}" placeholder="APT 1D"></label>
+      <label>City<input data-h="city" value="${esc(h.city)}"></label>
+      <label>State (2 letters)<input data-h="state" value="${esc(h.state)}" maxlength="2"></label>
+      <label>ZIP<input data-h="zip" value="${esc(h.zip)}" class="mono" maxlength="5"></label>
+    </div>
+    <div class="preview" data-cp="${i}"></div>
+    <details style="margin-top:8px"><summary>Advanced: write full address lines / HAWB HTS by hand</summary>
+      <div class="grid wide" style="margin-top:8px">
+        <label class="span2">Full shipper_address1 (overrides auto line)<input data-h="shipperFull" value="${esc(h.shipperFull)}"></label>
+        <label class="span2">Full consignee_street_1 (overrides auto line)<input data-h="consFull" value="${esc(h.consFull)}"></label>
+        <label>HAWB HTS (blank = first item's code)<input data-h="htsOverride" value="${esc(h.htsOverride)}" class="mono"></label>
+      </div>
+    </details>
+    <div class="sub">Commodities</div>
+    <table class="items"><thead><tr><th>Description</th><th>Qty / units</th><th>HTS code</th><th style="text-align:right">Value</th><th></th></tr></thead>
+    <tbody>${itemRows}</tbody></table>
+    <button data-act="addItem" style="margin-top:6px">+ Add item</button>
+   </div></div>`;
+}
+
+function render(){
+  $("#hawbList").innerHTML = st.hawbs.map(hawbCard).join("");
+  refresh();
+}
+
+function refresh(){
+  $("#mawbFmt").value=fmtMawb(clean(st.m.prefix),st.m.mawbNo);
+  const v=computeValues(st);
+  st.hawbs.forEach((h,i)=>{
+    const p=document.querySelector(`[data-hv="${i}"]`); if(p) p.textContent=`USD ${money(v.hawbCents[i])} · ${h.items.length} item${h.items.length>1?"s":""}`;
+    h.items.forEach((it,k)=>{ const c=document.querySelector(`[data-val="${i}-${k}"]`); if(c) c.textContent=money(v.itemCents[i][k]); });
+    const sp=document.querySelector(`[data-sp="${i}"]`); if(sp) sp.innerHTML=`shipper_address1 → <code>${esc(shipperLine(h,st.fx))||"—"}</code>`;
+    const cp=document.querySelector(`[data-cp="${i}"]`); if(cp) cp.innerHTML=`consignee_street_1 → <code>${esc(consLine(h,st.fx))||"—"}</code> · HAWB HTS → <code>${esc(hawbHts(h))||"—"}</code>`;
+  });
+  document.querySelectorAll('input[data-it="hts"]').forEach(el=>el.classList.toggle("bad", !!el.value.trim() && !HTS_RE.test(el.value.trim())));
+  const total=v.hawbCents.reduce((a,b)=>a+b,0);
+  $("#sH").textContent=st.hawbs.length;
+  $("#sC").textContent=st.hawbs.reduce((a,h)=>a+h.items.length,0);
+  $("#sV").textContent=money(total);
+  const iss=validate(st);
+  const ne=iss.filter(x=>x[0]==="e").length, nw=iss.length-ne;
+  $("#sI").innerHTML = ne? `<b style="color:var(--err)">${ne} error${ne>1?"s":""}</b>` : `<b class="ok">Ready</b>`;
+  $("#issues").innerHTML = iss.length ? iss.map(([t,m])=>`<li class="${t}">${esc(m)}</li>`).join("") : `<li class="ok">All checks passed. The CSV matches the correct-file layout.</li>`;
+  renderPreview();
+  save();
+}
+
+function renderPreview(){
+  const rows=buildRows(st);
+  let last=0; rows.forEach(r=>{ for(let c=NCOL-1;c>=0;c--) if(r[c]!==""){ last=Math.max(last,c); break; } });
+  $("#prev").innerHTML = rows.map((r,i)=>`<tr class="${i===2||r[0]==="HAWB"?"h":""}">${r.slice(0,last+1).map(c=>`<td>${esc(c)}</td>`).join("")}</tr>`).join("");
+}
+
+function refreshDatalist(){
+  let dl=$("#itemNames"); if(!dl){ dl=document.createElement("datalist"); dl.id="itemNames"; document.body.appendChild(dl); }
+  dl.innerHTML=allNames().map(n=>`<option value="${esc(n)}">`).join("");
+}
+
+function nextHawbNo(){
+  const nums=st.hawbs.map(h=>clean(h.hawb)).filter(x=>/^\d+$/.test(x));
+  if(!nums.length) return "";
+  const last=nums[nums.length-1];
+  return (BigInt(last)+1n).toString().padStart(last.length,"0");
+}
+
+/* events */
+document.addEventListener("input",e=>{
+  const el=e.target;
+  if(el.dataset.m!==undefined){ st.m[el.dataset.m]=el.value; refresh(); return; }
+  if(el.dataset.fx!==undefined){ st.fx[el.dataset.fx]=el.value; refresh(); return; }
+  const card=el.closest(".hawb"); if(!card) return;
+  const h=st.hawbs[+card.dataset.i];
+  if(el.dataset.h){ h[el.dataset.h]=el.value; if(el.dataset.h==="hawb") card.querySelector(".num").textContent=el.value||"New HAWB"; refresh(); return; }
+  if(el.dataset.it){
+    const k=+el.closest("tr").dataset.k, it=h.items[k];
+    it[el.dataset.it]=el.value;
+    if(el.dataset.it==="name"){
+      // auto-fill only when the name matches a saved item exactly (singular/plural, ladies=women etc. count),
+      // and only if the code box is empty or was auto-filled earlier
+      const top=suggestHts(el.value, library(), 1)[0];
+      const box=el.closest("tr").querySelector('[data-it="hts"]');
+      if(!clean(it.hts) || it.autoHts){
+        if(top && top.exact){ it.hts=top.code; it.autoHts=true; }
+        else if(it.autoHts){ it.hts=""; it.autoHts=false; }
+        box.value=it.hts;
+      }
+      updateSugg(+card.dataset.i,k);
+    }
+    if(el.dataset.it==="hts"){ it.autoHts=false; if(HTS_RE.test(clean(el.value))) rememberHts(it.name, clean(el.value)); updateSugg(+card.dataset.i,k); }
+    refresh();
+  }
+});
+document.addEventListener("change",e=>{ if(e.target.dataset.fx) { st.fx[e.target.dataset.fx]=e.target.value; refresh(); } });
+
+document.addEventListener("click",e=>{
+  const b=e.target.closest("button"); if(!b) return;
+  if(b.dataset.mode){ st.mode=b.dataset.mode;
+    if(st.mode==="hawb"){ const v=computeValues(Object.assign({},st,{mode:"manifest"})); st.hawbs.forEach((h,i)=>{ if(!clean(h.value)) h.value=money(v.hawbCents[i]); }); }
+    renderMode(); return; }
+  if(b.dataset.split){ st.itemSplit=b.dataset.split; renderMode(); return; }
+  if(b.id==="btnShuffleAll"){ st.hawbs.forEach(h=>h.seed=newSeed()); refresh(); toast("New random split for all HAWBs"); return; }
+  const card=b.closest(".hawb"); const i=card?+card.dataset.i:-1;
+  const act=b.dataset.act;
+  if(act==="addItem"){ st.hawbs[i].items.push(newItem()); render(); focusLast(i); }
+  else if(act==="delItem"){ const k=+b.closest("tr").dataset.k; const h=st.hawbs[i]; if(h.items.length>1){ h.items.splice(k,1); render(); } else toast("A HAWB needs at least one item"); }
+  else if(act==="delHawb"){ if(confirm(`Delete HAWB ${st.hawbs[i].hawb||""}?`)){ st.hawbs.splice(i,1); render(); } }
+  else if(act==="dup"){ const c=JSON.parse(JSON.stringify(st.hawbs[i])); c.hawb=nextHawbNo(); c.seed=newSeed(); st.hawbs.splice(i+1,0,c); render(); }
+  else if(act==="up" && i>0){ [st.hawbs[i-1],st.hawbs[i]]=[st.hawbs[i],st.hawbs[i-1]]; render(); }
+  else if(act==="down" && i<st.hawbs.length-1){ [st.hawbs[i+1],st.hawbs[i]]=[st.hawbs[i],st.hawbs[i+1]]; render(); }
+  else if(act==="shuffle"){ st.hawbs[i].seed=newSeed(); refresh(); }
+  else if(act==="hts"){ openHts(i,+b.closest("tr").dataset.k); }
+  else if(act==="sg"){
+    const k=+b.closest("tr").dataset.k, it=st.hawbs[i].items[k];
+    it.hts=b.dataset.code; it.autoHts=false; rememberHts(it.name,it.hts);
+    b.closest("tr").querySelector('[data-it="hts"]').value=it.hts;
+    updateSugg(i,k); refresh();
+  }
+});
+function focusLast(i){ const rows=document.querySelectorAll(`.hawb[data-i="${i}"] tbody tr`); const r=rows[rows.length-1]; if(r) r.querySelector("input").focus(); }
+
+$("#btnAddHawb").onclick=()=>{
+  const h=newHawb(nextHawbNo());
+  const prev=st.hawbs[st.hawbs.length-1];
+  st.hawbs.push(h); render();
+  const card=document.querySelector(`.hawb[data-i="${st.hawbs.length-1}"]`);
+  card.scrollIntoView({behavior:"smooth",block:"start"});
+  card.querySelector(prev?'[data-h="pcs"]':'[data-h="hawb"]').focus();
+};
+$("#btnNew").onclick=()=>{ if(confirm("Clear everything and start a new manifest?")){ const keep=st.m; st=newState(); st.m.prefix=keep.prefix; st.m.acctEmail=keep.acctEmail; st.m.xlEmail=keep.xlEmail||st.m.xlEmail; st.hawbs.push(newHawb("")); renderManifest(); } };
+function hasWork(){ return st.hawbs.some(h=>clean(h.hawb)||clean(h.consPerson)||h.items.some(it=>clean(it.name))); }
+$("#btnImport").onclick=()=>{
+  if(hasWork() && !confirm("Importing replaces the manifest currently in the form. Continue?")) return;
+  $("#fileIn").click();
+};
+async function readText(file){
+  const buf=await file.arrayBuffer();
+  try{ return new TextDecoder("utf-8",{fatal:true}).decode(buf); }
+  catch(e){ return new TextDecoder("windows-1252").decode(buf); }   // Excel "CSV" (ANSI) files
+}
+$("#fileIn").onchange=async e=>{
+  const f=e.target.files[0]; e.target.value=""; if(!f) return;
+  try{
+    const next=importCSV(await readText(f));
+    next.m.fileName=f.name.replace(/\.csv$/i,"");
+    const notes=next.notes||[]; delete next.notes;
+    st=next;
+    st.hawbs.forEach(h=>h.items.forEach(it=>rememberHts(it.name,clean(it.hts))));
+    renderManifest();
+    const total=money(st.hawbs.reduce((a,h)=>a+toCents(h.value),0));
+    const errs=validate(st).filter(x=>x[0]==="e").length;
+    let msg=`Imported ${st.hawbs.length} HAWBs, ${st.hawbs.reduce((a,h)=>a+h.items.length,0)} items, total USD ${total}.`;
+    if(notes.length) msg+=`\n\nFixed automatically:\n• `+notes.join("\n• ");
+    msg+= errs ? `\n\n${errs} problem(s) need attention — see Checks.` : `\n\nAll checks passed.`;
+    alert(msg);
+    if(errs) document.querySelector("#issues").scrollIntoView({behavior:"smooth"});
+  }catch(err){ alert("Could not import that file.\n\n"+err.message); }
+};
+$("#btnDownload").onclick=()=>{
+  const iss=validate(st).filter(x=>x[0]==="e");
+  if(iss.length && !confirm(`${iss.length} error(s) still listed under Checks. Download anyway?`)) return;
+  const blob=new Blob([toCSV(buildRows(st))],{type:"text/csv;charset=utf-8"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob); a.download=(clean(st.m.fileName)||"manifest")+".csv";
+  document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href); a.remove();},500);
+};
+
+$("#btnXlsx").onclick=()=>{
+  const iss=validate(st).filter(x=>x[0]==="e" || /^Excel:/.test(x[1]));
+  if(iss.length && !confirm(`${iss.length} problem(s) still listed under Checks:\n\n• ${iss.slice(0,8).map(x=>x[1]).join("\n• ")}${iss.length>8?"\n…":""}\n\nDownload anyway?`)) return;
+  const blob=new Blob([toXlsx(buildXlsxRows(st))],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+  const mf=fmtMawb(clean(st.m.prefix),st.m.mawbNo);
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob); a.download=(mf?`${mf} - Manifest`:(clean(st.m.fileName)||"manifest"))+".xlsx";
+  document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href); a.remove();},500);
+};
+
+/* HTS picker */
+let htsTarget=null;
+function openHts(i,k){
+  htsTarget={i,k}; const it=st.hawbs[i].items[k];
+  $("#htsQ").value=clean(it.name).toLowerCase(); $("#htsManual").value=clean(it.hts);
+  $("#htsLive").innerHTML=`<span class="note">Press “Search HTS”.</span>`;
+  renderSaved(); $("#htsDlg").showModal(); $("#htsQ").focus();
+  if(clean(it.name)) searchHts();
+}
+function renderSaved(){
+  const q=clean($("#htsQ").value);
+  const hits = q ? suggestHts(q, library(), 30)
+    : library().flatMap(([n,codes,mine])=>codes.map(([code,count])=>({code,name:n,count,mine}))).slice(0,80);
+  $("#htsSaved").innerHTML = hits.length ? hits.map(x=>`<div class="res" data-code="${esc(x.code)}"><span class="c">${esc(x.code)}</span><span class="d">${esc(x.name)}</span><span class="duty">${x.mine?"yours":"used "+x.count+"× in correct file"}</span></div>`).join("") : `<span class="note">No saved code matches.</span>`;
+}
+function pickHts(code){
+  if(!htsTarget) return;
+  const it=st.hawbs[htsTarget.i].items[htsTarget.k];
+  it.hts=code; it.autoHts=false; rememberHts(it.name,code); updateSugg(htsTarget.i,htsTarget.k);
+  const inp=document.querySelector(`.hawb[data-i="${htsTarget.i}"] tr[data-k="${htsTarget.k}"] [data-it="hts"]`); if(inp) inp.value=code;
+  $("#htsDlg").close(); refresh(); toast(`HTS ${code} set`);
+}
+async function searchHts(){
+  const q=clean($("#htsQ").value); renderSaved(); if(!q) return;
+  const box=$("#htsLive"); box.innerHTML=`<span class="note">Searching hts.usitc.gov…</span>`;
+  const link=`https://hts.usitc.gov/search?query=${encodeURIComponent(q)}`;
+  try{
+    const ctrl=new AbortController(); const t=setTimeout(()=>ctrl.abort(),12000);
+    const res=await fetch(`https://hts.usitc.gov/reststop/search?keyword=${encodeURIComponent(q)}`,{signal:ctrl.signal});
+    clearTimeout(t);
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    const list=parseHtsResults(await res.json());
+    box.innerHTML = list.length
+      ? list.slice(0,60).map(r=>`<div class="res" data-code="${esc(r.code)}"><span class="c">${esc(r.code)}</span><span><div class="d">${esc(r.desc)}</div>${r.path?`<div class="p">${esc(r.path)}</div>`:""}</span>${r.duty?`<span class="duty">duty ${esc(r.duty)}</span>`:""}</div>`).join("")
+        + `<p class="note">Showing 10-digit statistical codes only. <a href="${link}" target="_blank" rel="noopener">See full results on the HTS site</a>.</p>`
+      : `<span class="note">No 10-digit codes found. Try fewer words (e.g. “shawl” instead of “women shawl cotton”), or <a href="${link}" target="_blank" rel="noopener">search on the HTS site</a>.</span>`;
+  }catch(err){
+    box.innerHTML=`<span class="note">The browser could not reach the HTS site directly (${esc(err.message||"blocked")}). <a href="${link}" target="_blank" rel="noopener">Open the search on hts.usitc.gov</a>, copy the 10-digit code, and paste it in “Type a code yourself” above.</span>`;
+  }
+}
+$("#htsGo").onclick=searchHts;
+$("#htsQ").addEventListener("keydown",e=>{ if(e.key==="Enter") searchHts(); });
+$("#htsQ").addEventListener("input",renderSaved);
+$("#htsClose").onclick=()=>$("#htsDlg").close();
+$("#htsUseManual").onclick=()=>{ const c=clean($("#htsManual").value); if(HTS_RE.test(c)) pickHts(c); else toast("Code must look like 0000.00.00.00"); };
+$("#htsDlg").addEventListener("click",e=>{ const r=e.target.closest(".res"); if(r) pickHts(r.dataset.code); });
+
+load(); refreshDatalist(); renderManifest();
+</script>
+</body>
+</html>
