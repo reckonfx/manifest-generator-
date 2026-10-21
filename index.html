@@ -93,13 +93,15 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
 </head>
 <body>
 <header><div class="bar">
-  <h1>Direct USA Manifest → CSV</h1>
+  <h1>Direct USA Manifest</h1>
   <span class="stat">HAWBs <b id="sH">0</b></span>
   <span class="stat">Items <b id="sC">0</b></span>
   <span class="stat">Total value <b id="sV">0.00</b></span>
   <span class="stat" id="sI"></span>
   <span class="spacer"></span>
+  <button id="btnImportXl" title="Import the raw ZEX shipment manifest (.xlsx)">Import Excel manifest</button>
   <button id="btnImport">Import CSV</button>
+  <input type="file" id="xlIn" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
   <button id="btnNew" class="danger">New manifest</button>
   <button id="btnDownload" class="primary">Download CSV</button>
   <button id="btnXlsx" class="primary">Download Manifest Excel</button>
@@ -558,6 +560,131 @@ function validate(st){
   return out;
 }
 
+/* ---------- Read .xlsx in the browser (no library) ---------- */
+async function unzipEntries(buf){                 // -> {name: Uint8Array}
+  const b=new Uint8Array(buf), dv=new DataView(b.buffer,b.byteOffset,b.byteLength), out={};
+  let e=-1; for(let i=b.length-22;i>=Math.max(0,b.length-65557);i--) if(dv.getUint32(i,true)===0x06054b50){ e=i; break; }
+  if(e<0) throw new Error("Not an .xlsx file (zip directory not found). If it is an old .xls, open it in Excel and Save As .xlsx.");
+  let p=dv.getUint32(e+16,true); const n=dv.getUint16(e+10,true);
+  for(let k=0;k<n;k++){
+    const method=dv.getUint16(p+10,true), csize=dv.getUint32(p+20,true), nl=dv.getUint16(p+28,true), xl=dv.getUint16(p+30,true), cl=dv.getUint16(p+32,true), lo=dv.getUint32(p+42,true);
+    const name=new TextDecoder().decode(b.subarray(p+46,p+46+nl)); p+=46+nl+xl+cl;
+    const start=lo+30+dv.getUint16(lo+26,true)+dv.getUint16(lo+28,true), data=b.subarray(start,start+csize);
+    if(method===0) out[name]=data;
+    else if(method===8) out[name]=new Uint8Array(await new Response(new Blob([data]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).arrayBuffer());
+  }
+  return out;
+}
+function xmlText(s){ return String(s).replace(/&(lt|gt|quot|apos|amp|#x([0-9a-f]+)|#(\d+));/gi,(m,a,h,d)=>h?String.fromCodePoint(parseInt(h,16)):d?String.fromCodePoint(+d):({lt:"<",gt:">",quot:'"',apos:"'",amp:"&"})[a.toLowerCase()]); }
+function colIndex(ref){ const L=ref.replace(/\d+/g,""); let n=0; for(const ch of L) n=n*26+(ch.charCodeAt(0)-64); return n-1; }
+/* -> array of rows (array of strings) of the first sheet */
+async function readXlsx(buf){
+  const z=await unzipEntries(buf), td=new TextDecoder();
+  const get=n=>z[n]?td.decode(z[n]):"";
+  const shared=[...get("xl/sharedStrings.xml").matchAll(/<si>([\s\S]*?)<\/si>/g)]
+    .map(m=>[...m[1].matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g)].map(t=>xmlText(t[1])).join(""));
+  // first sheet in workbook order
+  let sheet="xl/worksheets/sheet1.xml";
+  const rid=(get("xl/workbook.xml").match(/<sheet\b[^>]*r:id="([^"]+)"/)||[])[1];
+  if(rid){ const t=(get("xl/_rels/workbook.xml.rels").match(new RegExp(`<Relationship\\b[^>]*Id="${rid}"[^>]*Target="([^"]+)"`))||
+            get("xl/_rels/workbook.xml.rels").match(new RegExp(`<Relationship\\b[^>]*Target="([^"]+)"[^>]*Id="${rid}"`))||[])[1];
+    if(t) sheet=t.startsWith("/")?t.slice(1):"xl/"+t.replace(/^\.\//,""); }
+  const xml=get(sheet); if(!xml) throw new Error("Could not find the worksheet inside the file.");
+  const rows=[];
+  for(const rm of xml.matchAll(/<row\b([^>]*)>([\s\S]*?)<\/row>|<row\b([^>]*)\/>/g)){
+    const rn=+((rm[1]||rm[3]||"").match(/\br="(\d+)"/)||[])[1]||rows.length+1;
+    const row=[];
+    for(const cm of (rm[2]||"").matchAll(/<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g)){
+      const at=cm[1], ref=(at.match(/\br="([A-Z]+)\d*"/)||[])[1], t=(at.match(/\bt="(\w+)"/)||[])[1], inner=cm[2]||"";
+      let v=(inner.match(/<v>([\s\S]*?)<\/v>/)||[])[1];
+      if(t==="s") v=shared[+v];
+      else if(t==="inlineStr") v=[...inner.matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g)].map(x=>xmlText(x[1])).join("");
+      else if(v!=null) v=xmlText(v);
+      if(v!=null && ref) row[colIndex(ref)]=String(v);
+    }
+    rows[rn-1]=Array.from(row,x=>x==null?"":x);
+  }
+  return Array.from(rows,r=>r||[]);
+}
+
+/* ---------- Raw ZEX shipment manifest -> form state ---------- */
+const US_STATES={ALABAMA:"AL",ALASKA:"AK",ARIZONA:"AZ",ARKANSAS:"AR",CALIFORNIA:"CA",COLORADO:"CO",CONNECTICUT:"CT",DELAWARE:"DE",
+  "DISTRICT OF COLUMBIA":"DC",FLORIDA:"FL",GEORGIA:"GA",HAWAII:"HI",IDAHO:"ID",ILLINOIS:"IL",INDIANA:"IN",IOWA:"IA",KANSAS:"KS",
+  KENTUCKY:"KY",LOUISIANA:"LA",MAINE:"ME",MARYLAND:"MD",MASSACHUSETTS:"MA",MICHIGAN:"MI",MINNESOTA:"MN",MISSISSIPPI:"MS",
+  MISSOURI:"MO",MONTANA:"MT",NEBRASKA:"NE",NEVADA:"NV","NEW HAMPSHIRE":"NH","NEW JERSEY":"NJ","NEW MEXICO":"NM","NEW YORK":"NY",
+  "NORTH CAROLINA":"NC","NORTH DAKOTA":"ND",OHIO:"OH",OKLAHOMA:"OK",OREGON:"OR",PENNSYLVANIA:"PA","RHODE ISLAND":"RI",
+  "SOUTH CAROLINA":"SC","SOUTH DAKOTA":"SD",TENNESSEE:"TN",TEXAS:"TX",UTAH:"UT",VERMONT:"VT",VIRGINIA:"VA",WASHINGTON:"WA",
+  "WEST VIRGINIA":"WV",WISCONSIN:"WI",WYOMING:"WY","PUERTO RICO":"PR"};
+function normState(s){ const u=clean(s).toUpperCase().replace(/\./g,""); return US_STATES[u] || (/^[A-Z]{2}$/.test(u)?u:clean(s)); }
+function normHts(s){
+  const d=clean(s).replace(/\D/g,"");
+  return d.length===10 ? `${d.slice(0,4)}.${d.slice(4,6)}.${d.slice(6,8)}.${d.slice(8)}` : clean(s);   // other lengths left as-is -> flagged by Checks
+}
+function normPhone(s){
+  const d=clean(s).replace(/\D/g,"");
+  if(d.length===10) return "1"+d;          // US number without country code
+  return d || clean(s);
+}
+/* "6177 North Lincoln Ave.  # 109, Chicago Illinois 60659" + city/state -> {street, zip} */
+function splitUsAddress(full, city, state){
+  let s=clean(full).replace(/\s{2,}/g," ");
+  // ZIP = 5 digits at the END of the address (optionally followed by "." or a 2-letter state),
+  // never the house number at the start ("47772 SAULTY DRIVE" has no ZIP)
+  const zm=s.match(/[\s,](\d{5})(?:-\d{4})?[\s.,]*(?:[A-Za-z]{2})?[\s.]*$/);
+  const zip=zm?zm[1]:"";
+  let street=s;
+  const c=clean(city);
+  if(c){
+    const i=street.toUpperCase().lastIndexOf(c.toUpperCase());
+    if(i>0) street=street.slice(0,i);
+  }
+  if(street===s){                                             // city not found: drop zip / state words at the end
+    if(zm) street=street.slice(0,zm.index);
+    const st=clean(state).toUpperCase(), name=Object.keys(US_STATES).find(k=>US_STATES[k]===st);
+    street=street.replace(new RegExp(`[,\\s]+(?:${reEsc(st)}${name?"|"+reEsc(name):""})\\s*,?\\s*$`,"i"),"");
+  }
+  street=street.replace(/[\s,.]+$/,"").trim();
+  return {street, zip};
+}
+function headerIndex(head){
+  const k=s=>clean(s).toLowerCase().replace(/[^a-z0-9]/g,"");
+  const map={}; head.forEach((h,i)=>{ if(clean(h)) map[k(h)]=i; });
+  return name=>map[k(name)];
+}
+/* rows: array of arrays incl. header row. Returns {st, notes} */
+function importRawManifest(rows, lib){
+  lib=lib||SAVED_HTS.map(([n,codes])=>[n,codes,false]);
+  const hi=rows.findIndex(r=>r.some(c=>/hawb_?number/i.test(String(c))));
+  if(hi<0) throw new Error("Header row with 'HAWB_Number' not found. Is this a ZEX shipment manifest?");
+  const col=headerIndex(rows[hi]), need=["HAWB_Number","Declared_Description","Consignee_Name"];
+  const miss=need.filter(n=>col(n)==null); if(miss.length) throw new Error("Missing column(s): "+miss.join(", "));
+  const g=(r,n)=>{ const i=col(n); return i==null?"":clean(r[i]); };
+  const st=newState(); st.mode="hawb"; st.itemSplit="random";
+  const notes=[];
+  for(const r of rows.slice(hi+1)){
+    const no=g(r,"HAWB_Number"); if(!no && !g(r,"Consignee_Name")) continue;
+    const h=newHawb(no.replace(/\.0$/,""));
+    h.pcs=g(r,"Quantity")||"1"; h.weight=g(r,"Gross_Weight"); h.value=g(r,"Unit_Value");
+    h.shipperName=g(r,"Exporter_Name"); h.shipperAddr=g(r,"Exporter_Street_Address");
+    h.consPerson=g(r,"Consignee_Name"); h.phone=normPhone(g(r,"Consignee_Phone"));
+    h.city=g(r,"Consignee_City"); h.state=normState(g(r,"Consignee_Country_Sub_Division"));
+    const a=splitUsAddress(g(r,"Consignee_Street_Address"), h.city, h.state);
+    h.consAddr=a.street; h.zip=a.zip;
+    const names=g(r,"Declared_Description").split("|").map(clean).filter(Boolean);
+    const codes=g(r,"HS_Code").split("|").map(clean).filter(Boolean);
+    h.items=(names.length?names:[""]).map((n,k)=>({name:n.toUpperCase(), units:"1", hts:normHts(codes[k]||"")}));
+    const filled=[];
+    h.items.forEach(it=>{ if(!it.hts && it.name){ const top=suggestHts(it.name, lib, 1)[0]; if(top && top.exact){ it.hts=top.code; filled.push(`${it.name} → ${top.code}`); } } });
+    if(codes.length!==names.length) notes.push(`${no}: ${names.length} item(s) but ${codes.length} HS code(s) in the file — check the codes`
+      + (filled.length?` (filled from saved codes: ${filled.join(", ")})`:""));
+    if(!a.zip) notes.push(`${no}: no ZIP found in the address — please type it`);
+    st.hawbs.push(h);
+  }
+  if(!st.hawbs.length) throw new Error("No shipment rows found under the header.");
+  st.m.target=money(st.hawbs.reduce((s,h)=>s+toCents(h.value),0));
+  return {st, notes};
+}
+
 const SAVED_HTS = [["ARTIFICIAL JWELLERY PACKET",[["7117.90.75.00",1]]],["BED SHEET COTTON",[["6302.21.90.00",1]]],["BOOKS",[["4820.10.20.00",1]]],["CARD HOLDER",[["6110.20.20.30",1]]],["CLOTH BAGS",[["6305.20.00.00",1]]],["DOZEN GENTS CAP COTTON",[["6505.00.20.60",1]]],["EMBROIDERED MONOGRAM PACKET",[["5807.10.05.20",2],["5810.92.10.00",1]]],["EMPTY CLOTH BAG PACKET",[["6305.20.00.00",1]]],["FACE MASK",[["6307.90.98.70",1]]],["FLEECE HOODIE GENTS",[["6110.20.20.41",2]]],["GENTS CAP",[["6505.00.20.60",1]]],["GENTS COTTON HOODIES",[["6110.20.20.40",1]]],["GENTS COTTON JACKET",[["6201.30.50.51",3],["6201.30.20.50",1],["6110.20.20.41",1]]],["GENTS COTTON PAJAMA",[["6207.21.00.10",1]]],["GENTS FLEECE HOODIE",[["6110.20.20.41",1]]],["GENTS FLEECE HOODIES",[["6110.20.20.40",1]]],["GENTS LEATHER JACKET",[["4203.10.40.30",3]]],["GENTS SATIN JACKET",[["6201.93.35.11",1]]],["GENTS SHORT COTTON",[["6203.42.45.51",1]]],["GENTS T SHIRT COTTON",[["6109.10.00.12",2]]],["GENTS UPPER COTTON",[["7117.90.90.00",1]]],["GENTS WALLET",[["4202.31.60.00",1]]],["GENTS WOOL JACKET",[["6201.20.40.11",1]]],["GIRLS SUIT COTTON",[["6204.12.00.10",3],["6204.22.30.70",1]]],["HAIR ACCESSORIES",[["9615.90.00.00",1]]],["KEYCHAIN PACKET",[["7326.90.86.88",1]]],["KITCHEN ITEM",[["7323.93.00.00",1]]],["LADIES ABAYA",[["6211.43.10.90",1]]],["LADIES DUPATTA",[["6214.90.00.00",1],["6214.40.00.00",1]]],["LADIES STOLLER",[["6214.30.00.00",1]]],["LADIES SUITS COTTON",[["6204.12.00.10",1]]],["LADIES TROUSER",[["6204.63.35.10",1]]],["LEATHER SEAT COVER",[["9401.99.10.10",1]]],["LEATHER SEAT COVER SET",[["4205.00.90.00",2],["9401.99.10.10",1]]],["PAIR SMACK GLOVES",[["3926.20.20.00",1]]],["PARACHUTE JACKET GENTS",[["6201.93.35.11",2]]],["PARACHUTE JACKETS GENTS",[["6201.93.35.11",1]]],["PLASTIC DESK PEN HOLDER",[["3926.10.00.00",1]]],["POLY BAG PACKET",[["3923.21.00.95",1]]],["PRAYER BEADS TASBHEE",[["4901.99.00.93",1]]],["PRINTING MATERIAL PACKET",[["4823.90.86.00",1]]],["READING BOOKS",[["4820.10.20.20",1]]],["SATIN JACKET GENTS",[["6201.93.35.11",1]]],["SHOPPING BAGS",[["6307.90.98.91",1]]],["SUIT PLASTIC BAGS",[["3923.21.00.00",2]]],["TAG CARDS",[["4821.10.40.00",1]]],["THANK YOU CARDS",[["4909.00.40.00",1]]],["WALLET COVER",[["3926.90.99.89",1]]],["WOMEN ABAYA",[["6211.43.10.90",1]]],["WOMEN ABAYA COTTON",[["6211.42.10.10",1]]],["WOMEN KURTI COTTON",[["6206.30.30.40",1]]],["WOMEN PURSE",[["4202.22.15.00",1]]],["WOMEN SANDALS",[["6214.90.00.10",1]]],["WOMEN SCARF COTTON",[["6214.90.00.10",1]]],["WOMEN SHAWL",[["6201.40.10.00",1]]],["WOMEN SHAWL COTTON",[["6214.90.00.10",2]]],["WOMEN SHIRT COTTON",[["6206.30.30.11",1]]],["WOMEN SUIT COTTON",[["6204.12.00.10",12],["6204.22.30.70",11],["6204.22.30.65",2],["6204.22.10.00",1],["6204.12.00.30",1],["6103.39.90.00",1],["6214.90.00.10",1]]],["WOMEN SUITS COTTON",[["6204.12.00.10",12]]],["WOMEN SWEATER",[["6402.99.31.65",1]]],["WOMEN TOP COTTON",[["6206.30.00.30",1]]],["WOMEN TROUSER COTTON",[["6204.62.80.31",1],["6204.22.30.70",1]]],["WOMEN UNDERGARMENTS",[["6208.91.30.00",1]]],["WRESTLING BELTS",[["3926.90.55.00",1]]]];
 
 /* USITC result -> list of {code, desc, path, duty} with full 10-digit codes */
@@ -608,7 +735,7 @@ function suggestHts(name, library, limit){
   }
   return Object.values(best).sort((x,y)=>y.score-x.score).slice(0,limit||6);
 }
-if(typeof module!=="undefined") module.exports={newState,newHawb,newItem,alloc,randomSplit,buildXlsxRows,toXlsx,computeValues,buildRows,toCSV,parseCSV,importCSV,validate,parseHtsResults,HTS_RE,normTokens,suggestHts,SAVED_HTS};
+if(typeof module!=="undefined") module.exports={newState,newHawb,newItem,alloc,randomSplit,buildXlsxRows,toXlsx,readXlsx,importRawManifest,splitUsAddress,computeValues,buildRows,toCSV,parseCSV,importCSV,validate,parseHtsResults,HTS_RE,normTokens,suggestHts,SAVED_HTS};
 </script>
 
 <script>
@@ -852,6 +979,28 @@ function hasWork(){ return st.hawbs.some(h=>clean(h.hawb)||clean(h.consPerson)||
 $("#btnImport").onclick=()=>{
   if(hasWork() && !confirm("Importing replaces the manifest currently in the form. Continue?")) return;
   $("#fileIn").click();
+};
+$("#btnImportXl").onclick=()=>{
+  if(hasWork() && !confirm("Importing replaces the HAWBs currently in the form (MAWB, flight and email fields are kept). Continue?")) return;
+  $("#xlIn").click();
+};
+$("#xlIn").onchange=async e=>{
+  const f=e.target.files[0]; e.target.value=""; if(!f) return;
+  try{
+    const rows=await readXlsx(await f.arrayBuffer());
+    const {st:next, notes}=importRawManifest(rows, library());
+    const keep=st.m; next.m=Object.assign({}, keep, {target:next.m.target});   // keep MAWB / flight / emails already typed
+    next.fx=st.fx;
+    st=next;
+    renderManifest();
+    const total=money(st.hawbs.reduce((a,h)=>a+toCents(h.value),0));
+    const errs=validate(st).filter(x=>x[0]==="e").length;
+    let msg=`Imported ${st.hawbs.length} HAWBs, ${st.hawbs.reduce((a,h)=>a+h.items.length,0)} items, total USD ${total} from ${f.name}.`;
+    if(notes.length) msg+=`\n\nPlease check:\n• `+notes.slice(0,20).join("\n• ")+(notes.length>20?`\n… and ${notes.length-20} more`:"");
+    msg+= errs ? `\n\n${errs} problem(s) need attention — see Checks.` : `\n\nAll checks passed.`;
+    alert(msg);
+    if(errs) document.querySelector("#issues").scrollIntoView({behavior:"smooth"});
+  }catch(err){ alert("Could not import that Excel file.\n\n"+err.message); }
 };
 async function readText(file){
   const buf=await file.arrayBuffer();
